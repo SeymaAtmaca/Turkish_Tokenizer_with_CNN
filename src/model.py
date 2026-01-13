@@ -19,4 +19,4 @@ class BoundaryCNN(nn.Module):
     def forward(self,x):
         x=self.emb(x).permute(0,2,1)
         x=self.net(x).squeeze(1)
-        return torch.sigmoid(x)
+        return x   # ❗ sigmoid YOK

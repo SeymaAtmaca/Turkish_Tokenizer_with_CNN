@@ -1,30 +1,38 @@
 import torch
-from src.dataset import MorphDataset
 from src.model import BoundaryCNN
 
+MAX_LEN = 25
 
+# modeli ve vocab'ı yükle
+state, vocab = torch.load("model.pt", map_location="cpu")
 
-state,vocab=torch.load("model.pt")
-ivocab={v:k for k,v in vocab.items()}
-
-model=BoundaryCNN(len(vocab))
+model = BoundaryCNN(len(vocab))
 model.load_state_dict(state)
 model.eval()
 
-word="boyadıklar"
-x=torch.tensor([[vocab[c] for c in word]+[0]*(25-len(word))])
+def segment(word):
+    x = [vocab.get(c, 0) for c in word]
+    x = x + [0] * (MAX_LEN - len(x))
+    x = torch.tensor([x])
 
-with torch.no_grad():
-    p=model(x)[0][:len(word)]
+    with torch.no_grad():
+        probs = torch.sigmoid(model(x))[0]
 
-boundaries=(p>0.5).int()
+    out = []
+    cur = ""
 
-tokens=[]
-start=0
-for i,b in enumerate(boundaries):
-    if b==1 and i!=0:
-        tokens.append(word[start:i])
-        start=i
-tokens.append(word[start:])
+    for i, ch in enumerate(word):
+        cur += ch
+        if probs[i] > 0.5:
+            out.append(cur)
+            cur = ""
 
-print(tokens)
+    if cur:
+        out.append(cur)
+
+    return out
+
+
+# test
+print(segment("kızdıklarındakilerdenmiş"))
+# print(segment("boyadıklarımızda"))
